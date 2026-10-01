@@ -15,6 +15,12 @@ def create(data: ListingInput, host: User = Depends(require_role(Role.HOST)), db
     return {"data": service.to_dict(service.create(db, host, data)), "error": None}
 
 
+@router.get("/listings/{listing_id}", response_model=dict)
+def get_listing(listing_id: str, db: Session = Depends(get_db), actor: User | None = Depends(optional_user)):
+    listing = service.get_visible(db, listing_id, actor)
+    return {"data": service.to_dict(listing), "error": None}
+
+
 @router.delete("/listings/{listing_id}", response_model=dict)
 def remove(listing_id: str, host: User = Depends(require_role(Role.HOST)), db: Session = Depends(get_db)):
     service.remove(db, host, listing_id)
