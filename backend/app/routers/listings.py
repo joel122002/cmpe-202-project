@@ -21,6 +21,16 @@ def get_listing(listing_id: str, db: Session = Depends(get_db), actor: User | No
     return {"data": service.to_dict(listing), "error": None}
 
 
+@router.patch("/listings/{listing_id}", response_model=dict)
+def update(
+    listing_id: str,
+    data: ListingInput,
+    host: User = Depends(require_role(Role.HOST)),
+    db: Session = Depends(get_db),
+):
+    return {"data": service.to_dict(service.update(db, host, listing_id, data)), "error": None}
+
+
 @router.delete("/listings/{listing_id}", response_model=dict)
 def remove(listing_id: str, host: User = Depends(require_role(Role.HOST)), db: Session = Depends(get_db)):
     service.remove(db, host, listing_id)
