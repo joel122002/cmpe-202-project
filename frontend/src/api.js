@@ -28,3 +28,26 @@ export function readSession() {
     return null
   }
 }
+
+const SEARCH_PREFERENCES_KEY = 'searchPreferences'
+
+export function saveSearchPreferences(preferences) {
+  sessionStorage.setItem(SEARCH_PREFERENCES_KEY, JSON.stringify({
+    checkIn: preferences.checkIn,
+    checkOut: preferences.checkOut,
+    guests: Number(preferences.guests) || 2,
+  }))
+}
+
+export function readSearchPreferences() {
+  try {
+    const preferences = JSON.parse(sessionStorage.getItem(SEARCH_PREFERENCES_KEY))
+    return {
+      checkIn: preferences?.checkIn || '',
+      checkOut: preferences?.checkOut || '',
+      guests: Number(preferences?.guests) || 2,
+    }
+  } catch {
+    return { checkIn: '', checkOut: '', guests: 2 }
+  }
+}
