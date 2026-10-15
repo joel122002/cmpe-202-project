@@ -29,6 +29,12 @@ export function readSession() {
   }
 }
 
+export async function refreshSession() {
+  const user = await api('/auth/me')
+  localStorage.setItem('user', JSON.stringify(user))
+  return user
+}
+
 const SEARCH_PREFERENCES_KEY = 'searchPreferences'
 
 export function saveSearchPreferences(preferences) {
