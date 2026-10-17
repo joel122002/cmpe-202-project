@@ -11,6 +11,10 @@ export async function api(path, options = {}) {
   return payload.data
 }
 
+export function messageForError(error) {
+  return error instanceof Error ? error.message : 'Request failed'
+}
+
 export function saveSession(auth) {
   localStorage.setItem('token', auth.token)
   localStorage.setItem('user', JSON.stringify(auth.user))
