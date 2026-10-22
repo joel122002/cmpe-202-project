@@ -13,3 +13,7 @@ export default function LocationOptions({ onSelect }) {
     {locations.map((location) => <option key={`${location.city}-${location.state}`} value={location.city}>{location.city}, {location.state}</option>)}
   </select>
 }
+
+export function cityOptions(locations) {
+  return locations.map((location) => ({ value: location.city, label: `${location.city}, ${location.state}` }))
+}
