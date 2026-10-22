@@ -17,3 +17,7 @@ export default function LocationOptions({ onSelect }) {
 export function cityOptions(locations) {
   return locations.map((location) => ({ value: location.city, label: `${location.city}, ${location.state}` }))
 }
+
+export function stateOptions(locations, city) {
+  return locations.filter((location) => !city || location.city === city).map((location) => ({ value: location.state, label: location.state }))
+}
