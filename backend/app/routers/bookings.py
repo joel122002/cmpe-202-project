@@ -33,7 +33,7 @@ def get_booking(booking_id: str, actor: User = Depends(current_user), db: Sessio
     return {"data": service.to_dict(booking, db.get(Listing, booking.listing_id)), "error": None}
 
 
-@router.post("/{booking_id}/cancel", response_model=dict)
+@router.post("/{booking_id}/cancel", response_model=dict, status_code=200)
 def cancel(booking_id: str, customer: User = Depends(require_role(Role.CUSTOMER)), db: Session = Depends(get_db)):
     booking = service.cancel(db, customer, booking_id)
     return {"data": service.to_dict(booking, db.get(Listing, booking.listing_id)), "error": None}
