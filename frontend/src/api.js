@@ -6,7 +6,8 @@ export async function api(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`
   const response = await fetch(`${API_URL}${path}`, { ...options, headers })
   if (response.status === 204) return null
-  const payload = await response.json()
+  const payload = response.status === 204 ? null : await response.json()
+  if (!payload) return null
   if (!response.ok) throw new Error(payload.error?.message || 'Request failed')
   return payload.data
 }
