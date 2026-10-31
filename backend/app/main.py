@@ -1,9 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .errors import validation_exception_handler
+from .errors import error_response, validation_exception_handler
 from .routers import auth, bookings, listings, search
 
 app = FastAPI(title='Stayfinder API')
@@ -16,6 +16,12 @@ app.add_middleware(
     allow_headers=['*'],
 )
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(_, exc: HTTPException):
+    code = {401: 'AUTH_UNAUTHENTICATED', 403: 'AUTH_FORBIDDEN', 404: 'RESOURCE_NOT_FOUND', 409: 'BOOKING_DATE_UNAVAILABLE'}.get(exc.status_code, 'VALIDATION_ERROR')
+    return error_response(exc.status_code, code, str(exc.detail))
 app.include_router(auth.router, prefix='/api/v1')
 app.include_router(listings.router, prefix='/api/v1')
 app.include_router(search.router, prefix='/api/v1')
