@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { api, readSearchPreferences, saveSearchPreferences } from './api'
+import { validateSearch } from './SearchValidation'
 
 export default function SearchForm({ onResults }) {
   const [form, setForm] = useState(readSearchPreferences())
@@ -7,6 +8,8 @@ export default function SearchForm({ onResults }) {
 
   async function submit(event) {
     event.preventDefault()
+    const validationError = validateSearch(form)
+    if (validationError) return setError(validationError)
     saveSearchPreferences(form)
     try {
       onResults(await api(`/search/listings?${new URLSearchParams(form).toString()}`))
