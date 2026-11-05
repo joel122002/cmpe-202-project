@@ -1,7 +1,7 @@
 from datetime import date
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..models import Booking, BookingStatus, Review, User
@@ -17,6 +17,13 @@ def to_dict(review: Review) -> dict:
         "rating": review.rating,
         "comment": review.comment,
     }
+
+
+def rating_summary(db: Session, listing_id: str) -> tuple[float, int]:
+    average, count = db.execute(
+        select(func.avg(Review.rating), func.count(Review.id)).where(Review.listing_id == listing_id)
+    ).one()
+    return round(float(average or 0), 1), int(count or 0)
 
 
 def create(db: Session, customer: User, booking_id: str, data: ReviewInput) -> Review:
