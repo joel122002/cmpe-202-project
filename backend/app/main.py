@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .errors import error_response, validation_exception_handler
-from .routers import auth, bookings, listings, search
+from .routers import auth, bookings, listings, reviews, search
 
 app = FastAPI(title='Stayfinder API')
 settings = get_settings()
@@ -26,6 +26,7 @@ app.include_router(auth.router, prefix='/api/v1')
 app.include_router(listings.router, prefix='/api/v1')
 app.include_router(search.router, prefix='/api/v1')
 app.include_router(bookings.router, prefix='/api/v1')
+app.include_router(reviews.router, prefix='/api/v1')
 
 
 @app.get('/health')
