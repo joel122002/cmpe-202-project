@@ -21,3 +21,7 @@ export function cityOptions(locations) {
 export function stateOptions(locations, city) {
   return locations.filter((location) => !city || location.city === city).map((location) => ({ value: location.state, label: location.state }))
 }
+
+export function zipOptions(locations, city) {
+  return locations.filter((location) => !city || location.city === city).flatMap((location) => location.zipCodes.map((zipCode) => ({ value: zipCode, label: zipCode })))
+}
