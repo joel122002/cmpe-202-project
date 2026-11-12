@@ -53,6 +53,10 @@ pricePerNightCents, maxGuests, averageRating, reviewCount
 - The location endpoint returns only approved listing cities and ZIP codes.
 - Invalid city and ZIP filters are rejected.
 
+## Ownership
+
+Sagar owns location options, autocomplete validation, availability filtering, and result rendering.
+
 ## Acceptance boundary
 
 Search owns availability, location validation, and result shaping. It never creates or cancels bookings.
