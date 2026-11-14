@@ -117,3 +117,5 @@ cd backend
 ## Review-only fixture
 
 Use `customer.review@example.com` to verify the dedicated reviewer flow without changing host or customer ownership.
+
+The seed is idempotent; re-running it preserves existing users, listings, bookings, and reviews.
