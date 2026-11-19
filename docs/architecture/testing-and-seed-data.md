@@ -76,3 +76,5 @@ Mathew owns seed fixtures, analytics verification, and operational test data. Se
 ## Booking scenarios
 
 Seed data contains confirmed stays for availability checks and cancelled stays to verify dates become bookable again.
+
+The inventory spans multiple states, with additional coverage for San Jose and the Bay Area.
