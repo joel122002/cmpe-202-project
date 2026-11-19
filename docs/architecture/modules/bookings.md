@@ -43,3 +43,5 @@ Only the authenticated customer who created a confirmed booking may cancel it. C
 ## Delivery boundary
 
 Sonit owns reservation state transitions and cancellation. Reviews may read completed bookings but do not mutate booking state.
+
+The booking boundary ends at reservation state and customer history.
