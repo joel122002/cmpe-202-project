@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'
+const SEARCH_PREFERENCES_KEY = 'searchPreferences'
 
 export async function api(path, options = {}) {
   const token = localStorage.getItem('token')
@@ -6,14 +7,9 @@ export async function api(path, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`
   const response = await fetch(`${API_URL}${path}`, { ...options, headers })
   if (response.status === 204) return null
-  const payload = response.status === 204 ? null : await response.json()
-  if (!payload) return null
+  const payload = await response.json()
   if (!response.ok) throw new Error(payload.error?.message || 'Request failed')
   return payload.data
-}
-
-export function messageForError(error) {
-  return error instanceof Error ? error.message : 'Request failed'
 }
 
 export function saveSession(auth) {
@@ -33,14 +29,6 @@ export function readSession() {
     return null
   }
 }
-
-export async function refreshSession() {
-  const user = await api('/auth/me')
-  localStorage.setItem('user', JSON.stringify(user))
-  return user
-}
-
-const SEARCH_PREFERENCES_KEY = 'searchPreferences'
 
 export function saveSearchPreferences(preferences) {
   sessionStorage.setItem(SEARCH_PREFERENCES_KEY, JSON.stringify({
