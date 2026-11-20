@@ -9,7 +9,6 @@ from ..schemas import BookingInput
 from .common import nights, overlaps
 
 booking_lock = Lock()
-CANCELABLE_STATUSES = {BookingStatus.CONFIRMED.value}
 
 
 def to_dict(booking: Booking, listing: Listing | None = None) -> dict:
@@ -79,7 +78,7 @@ def cancel(db: Session, customer: User, booking_id: str) -> Booking:
         raise HTTPException(404, "Booking was not found")
     if booking.customer_id != customer.id:
         raise HTTPException(403, "Booking does not belong to this customer")
-    if booking.status not in CANCELABLE_STATUSES:
+    if booking.status == BookingStatus.CANCELLED.value:
         raise HTTPException(400, "Booking is already cancelled")
     booking.status = BookingStatus.CANCELLED.value
     db.commit()

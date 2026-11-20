@@ -6,8 +6,6 @@ from fastapi import HTTPException
 from ..models import Listing, ListingStatus, Review, User
 from ..schemas import ListingInput
 
-BOOKABLE_STATUSES = {ListingStatus.APPROVED.value}
-
 
 def to_dict(listing: Listing) -> dict:
     return {
@@ -74,13 +72,6 @@ def get_visible(db: Session, listing_id: str, actor: User | None = None) -> List
         actor and (actor.id == listing.host_id or actor.role == "ADMIN")
     ):
         raise HTTPException(404, "Listing was not found")
-    return listing
-
-
-def get_bookable(db: Session, listing_id: str) -> Listing:
-    listing = db.get(Listing, listing_id)
-    if not listing or listing.status not in BOOKABLE_STATUSES:
-        raise HTTPException(404, 'Listing was not found')
     return listing
 
 
