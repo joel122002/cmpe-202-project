@@ -36,12 +36,6 @@ Booking responses include `listingName` and the first listing photo as `listingP
 - Cancellation makes the date range bookable again.
 - A booking beyond 14 nights is rejected.
 
-## Cancellation contract
-
-Only the authenticated customer who created a confirmed booking may cancel it. Cancellation is idempotently rejected after the first state transition.
-
 ## Delivery boundary
 
 Sonit owns reservation state transitions and cancellation. Reviews may read completed bookings but do not mutate booking state.
-
-The booking boundary ends at reservation state and customer history.

@@ -114,8 +114,3 @@ Remove-Item backend\vacation_rental.db
 cd backend
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
-## Review-only fixture
-
-Use `customer.review@example.com` to verify the dedicated reviewer flow without changing host or customer ownership.
-
-The seed is idempotent; re-running it preserves existing users, listings, bookings, and reviews.

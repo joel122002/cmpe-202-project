@@ -33,5 +33,3 @@ getListingRatingSummary(listingId) -> RatingSummary
 ## Delivery boundary
 
 Sonit owns review eligibility and submission. Listing and analytics surfaces consume the review summary as read-only data.
-
-The review boundary ends at review submission and listing summary data.

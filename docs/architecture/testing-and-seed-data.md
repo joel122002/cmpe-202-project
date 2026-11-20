@@ -73,8 +73,3 @@ Tests must not depend on execution order or developer-local data. Each test crea
 ## Ownership
 
 Mathew owns seed fixtures, analytics verification, and operational test data. Seed changes must remain idempotent and keep the documented demo flows valid.
-## Booking scenarios
-
-Seed data contains confirmed stays for availability checks and cancelled stays to verify dates become bookable again.
-
-The inventory spans multiple states, with additional coverage for San Jose and the Bay Area.

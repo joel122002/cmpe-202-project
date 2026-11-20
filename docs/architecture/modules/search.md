@@ -53,16 +53,6 @@ pricePerNightCents, maxGuests, averageRating, reviewCount
 - The location endpoint returns only approved listing cities and ZIP codes.
 - Invalid city and ZIP filters are rejected.
 
-## Ownership
-
-Sagar owns location options, autocomplete validation, availability filtering, and result rendering.
-
-The module boundary is complete at the search response; booking mutations remain outside it.
-
-## Acceptance boundary
-
-Search owns availability, location validation, and result shaping. It never creates or cancels bookings.
-
 ## Delivery boundary
 
 Sagar owns search validation, location options, and result rendering. The module reads listing and booking data but does not create reservations.

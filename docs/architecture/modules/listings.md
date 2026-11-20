@@ -38,12 +38,6 @@ getBookableListing(listingId) -> BookableListing
 - Host cannot edit another host's listing.
 - Admin can reject/remove an inaccurate listing.
 
-## Ownership
-
-Sagar owns listing lifecycle, detail data, and listing-facing search inputs.
-
-The module boundary is complete at listing read and host mutation interfaces.
-
 ## Delivery boundary
 
 Sagar owns listing lifecycle and detail data. Search consumes this module through its read-only listing interface.
