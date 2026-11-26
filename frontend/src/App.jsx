@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import Select from 'react-select'
+import SearchPage from './Search'
+import StayScene from './StayScene'
+import { HostListings, ListingForm } from './Host'
 import {
   Link,
   Navigate,
@@ -43,7 +45,7 @@ function AuthLayout({ titleId, children }) {
     <Link className="login-back" to="/search">← Explore stays</Link>
     <div className="login-page">
       <section className="login-panel" aria-labelledby={titleId}>{children}</section>
-      <aside className="login-visual" aria-label="A little inspiration for your next stay"></aside>
+      <aside className="login-visual" aria-label="A little inspiration for your next stay"><StayScene /></aside>
     </div>
   </div>
 }
@@ -109,33 +111,6 @@ function Register({ onLogin }) {
   </AuthLayout>
 }
 
-function SearchPage() {
-  const [form, setForm] = useState(() => ({ ...readSearchPreferences(), city: null, state: null, zipCode: null }))
-  const [locations, setLocations] = useState([])
-  const [results, setResults] = useState([])
-  const [error, setError] = useState('')
-  useEffect(() => { api('/search/locations').then(setLocations).catch(err => setError(err.message)) }, [])
-  useEffect(() => { saveSearchPreferences(form) }, [form.checkIn, form.checkOut, form.guests])
-  const cityOptions = [...new Set(locations.map(location => location.city))].map(city => ({ value: city, label: city }))
-  const stateOptions = [...new Set(locations.filter(location => !form.city || location.city === form.city.value).map(location => location.state))].map(state => ({ value: state, label: state }))
-  const zipOptions = [...new Set(locations.filter(location => (!form.city || location.city === form.city.value) && (!form.state || location.state === form.state.value)).flatMap(location => location.zipCodes))].map(zipCode => ({ value: zipCode, label: zipCode }))
-  async function search(event) {
-    event?.preventDefault()
-    try {
-      const params = new URLSearchParams({ checkIn: form.checkIn, checkOut: form.checkOut, guests: form.guests })
-      if (form.city) params.set('city', form.city.value)
-      if (form.state) params.set('state', form.state.value)
-      if (form.zipCode) params.set('zipCode', form.zipCode.value)
-      setResults(await api(`/search/listings?${params}`)); setError('')
-    } catch (err) { setError(err.message) }
-  }
-  return <><section className="hero"><p className="eyebrow">Simple stays</p><h1>Find a place that fits.</h1><p className="muted">Search approved rentals for up to 14 nights.</p></section>
-    <form className="search-card" onSubmit={search}><label>Check-in<input type="date" value={form.checkIn} onChange={e => setForm({ ...form, checkIn: e.target.value })} required /></label>
-      <label>Check-out<input type="date" value={form.checkOut} onChange={e => setForm({ ...form, checkOut: e.target.value })} required /></label><label>Guests<input type="number" min="1" value={form.guests} onChange={e => setForm({ ...form, guests: e.target.value })} required /></label>
-      <label>City<Select className="location-select" options={cityOptions} value={form.city} onChange={city => setForm({ ...form, city, state: null, zipCode: null })} isClearable isSearchable placeholder="Any city" /></label><label>State<Select className="location-select" options={stateOptions} value={form.state} onChange={state => setForm({ ...form, state, zipCode: null })} isClearable isSearchable placeholder="Any state" /></label><label>ZIP<Select className="location-select" options={zipOptions} value={form.zipCode} onChange={zipCode => setForm({ ...form, zipCode })} isClearable isSearchable placeholder="Any ZIP" /></label><button className="primary">Search</button></form>
-    <Message error={error} /><div className="results-header"><div><p className="eyebrow">Curated for your dates</p><h2>Available stays</h2></div><span className="results-count">{results.length ? `${results.length} ${results.length === 1 ? 'stay' : 'stays'} found` : 'Search to explore stays'}</span></div>{results.length ? <section className="grid">{results.map(listing => <Link className="listing-card" to={`/listings/${listing.id}`} key={listing.id}><img src={listing.photoUrls[0]} alt="" /><div><h2>{listing.name}</h2><p>{listing.city}, {listing.state}</p><p>${(listing.pricePerNightCents / 100).toFixed(0)} / night · {listing.maxGuests} guests</p><p>★ {listing.averageRating || 'New'} ({listing.reviewCount})</p></div></Link>)}</section> : <section className="notice"><strong>Your next stay starts here.</strong><p className="muted">Choose dates and guests above to see available homes.</p></section>}</>
-}
-
 function ListingPage({ user }) {
   const { id } = useParams(); const navigate = useNavigate(); const [listing, setListing] = useState(null); const [reviews, setReviews] = useState([]); const [form, setForm] = useState(readSearchPreferences); const [error, setError] = useState('')
   useEffect(() => { Promise.all([api(`/listings/${id}`), api(`/listings/${id}/reviews`)]).then(([l, r]) => { setListing(l); setReviews(r) }).catch(err => setError(err.message)) }, [id])
@@ -155,20 +130,6 @@ function BookingsPage() {
   useEffect(() => { load() }, [])
   async function cancel(id) { try { await api(`/bookings/${id}/cancel`, { method: 'POST' }); load() } catch (err) { setError(err.message) } }
   return <><h1>My bookings</h1><Message error={error} /><section className="stack">{bookings.map(booking => <article className="panel booking-card" key={booking.id}>{booking.listingPhotoUrl && <img className="booking-image" src={booking.listingPhotoUrl} alt={`${booking.listingName || 'Property'} property`} />}<div><p className="eyebrow">Booked stay</p><h2>{booking.listingName || 'Property'}</h2><p>{booking.checkIn} → {booking.checkOut} · {booking.guests} guests</p><p>${(booking.totalCostCents / 100).toFixed(2)} · {booking.status}</p>{booking.status === 'CONFIRMED' && <button onClick={() => cancel(booking.id)}>Cancel booking</button>}{booking.status === 'CONFIRMED' && new Date(`${booking.checkOut}T00:00:00`) < new Date() && <Link className="button" to={`/bookings/${booking.id}/review`}>Review stay</Link>}</div></article>)}</section></>
-}
-
-function HostListings() {
-  const [listings, setListings] = useState([]); const [error, setError] = useState('')
-  useEffect(() => { api('/hosts/me/listings').then(setListings).catch(err => setError(err.message)) }, [])
-  return <><div className="page-heading"><div><h1>My listings</h1><p className="muted">Listings need admin approval before customers can book them.</p></div><Link className="button primary" to="/host/listings/new">Add listing</Link></div><Message error={error} /><section className="stack">{listings.map(listing => <article className="panel" key={listing.id}><h2>{listing.name}</h2><p>{listing.city}, {listing.state} · {listing.status}</p><Link className="button" to={`/host/listings/${listing.id}/edit`}>Edit</Link></article>)}</section></>
-}
-
-function ListingForm() {
-  const { id } = useParams(); const navigate = useNavigate(); const editing = Boolean(id); const [error, setError] = useState(''); const [form, setForm] = useState({ name: '', description: '', address: '', city: '', state: '', zipCode: '', latitude: '', longitude: '', pricePerNightCents: 12500, maxGuests: 2, photoUrls: [] })
-  useEffect(() => { if (editing) api(`/listings/${id}`).then(listing => setForm({ ...listing, photoUrls: listing.photoUrls })).catch(err => setError(err.message)) }, [editing, id])
-  async function submit(event) { event.preventDefault(); try { const payload = { ...form, latitude: form.latitude ? Number(form.latitude) : null, longitude: form.longitude ? Number(form.longitude) : null, pricePerNightCents: Number(form.pricePerNightCents), maxGuests: Number(form.maxGuests), photoUrls: form.photoUrls.length ? form.photoUrls : ['https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=900'] }; await api(editing ? `/listings/${id}` : '/listings', { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(payload) }); navigate('/host/listings') } catch (err) { setError(err.message) } }
-  const field = (key, label, type = 'text') => <label>{label}<input type={type} value={form[key]} onChange={e => setForm({ ...form, [key]: e.target.value })} required={!['latitude', 'longitude'].includes(key)} /></label>
-  return <section className="form-card"><h1>{editing ? 'Edit listing' : 'New listing'}</h1><form onSubmit={submit}>{field('name', 'Name')}{field('description', 'Description')}{field('address', 'Address')}{field('city', 'City')}{field('state', 'State')}{field('zipCode', 'ZIP code')}<div className="form-row">{field('latitude', 'Latitude', 'number')}{field('longitude', 'Longitude', 'number')}{field('pricePerNightCents', 'Price cents', 'number')}{field('maxGuests', 'Max guests', 'number')}</div><Message error={error} /><button className="primary">Save listing</button></form></section>
 }
 
 function AnalyticsPage({ admin = false }) { const [days, setDays] = useState(30); const [data, setData] = useState(null); const [error, setError] = useState(''); useEffect(() => { api(`${admin ? '/admin' : '/hosts/me'}/analytics?periodDays=${days}`).then(setData).catch(err => setError(err.message)) }, [admin, days]); return <><h1>{admin ? 'Admin analytics' : 'Host analytics'}</h1><label>Period<select value={days} onChange={e => setDays(e.target.value)}><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label><Message error={error} />{data && <section className="metrics"><div><strong>{data.totalListings}</strong><span>Listings</span></div><div><strong>{data.totalBookings}</strong><span>Bookings</span></div></section>}{data?.bookingsByZipCode.map(row => <p className="panel" key={row.zipCode}>{row.zipCode}: {row.bookingCount} bookings</p>)}</> }

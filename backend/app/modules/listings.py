@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from fastapi import HTTPException
 
+from ..errors import APIError
 from ..models import Listing, ListingStatus, Review, User
 from ..schemas import ListingInput
 
@@ -60,7 +61,7 @@ def get_owned(db: Session, host: User, listing_id: str) -> Listing:
     if not listing:
         raise HTTPException(404, "Listing was not found")
     if listing.host_id != host.id:
-        raise HTTPException(403, "Listing does not belong to this host")
+        raise APIError(403, "LISTING_NOT_OWNER", "Listing does not belong to this host")
     return listing
 
 
@@ -109,7 +110,7 @@ def moderate(db: Session, listing_id: str, status: ListingStatus) -> Listing:
     if not listing:
         raise HTTPException(404, "Listing was not found")
     if listing.status != ListingStatus.PENDING_APPROVAL.value:
-        raise HTTPException(400, "Only pending listings can be moderated")
+        raise APIError(400, "LISTING_INVALID_STATUS", "Only pending listings can be moderated")
     listing.status = status.value
     db.commit()
     db.refresh(listing)
