@@ -1,32 +1,37 @@
 import { useEffect, useState } from 'react'
 import SearchPage from './Search'
-import { ListingPage, BookingsPage } from './Stays'
 import StayScene from './StayScene'
-import { HostListings, ListingForm } from './Host'
 import {
   Link,
   Navigate,
+  NavLink,
+  Outlet,
   Route,
   Routes,
   useNavigate,
   useParams,
 } from 'react-router-dom'
-import { api, clearSession, readSearchPreferences, readSession, saveSearchPreferences, saveSession } from './api'
+import { AdminListings } from './Admin'
+import Analytics from './Analytics'
+import { HostListings, ListingForm } from './Host'
+import { ListingPage, BookingsPage } from './Stays'
+import { Message } from './Ui'
+import { api, clearSession, readSession, saveSession } from './api'
 
-function Layout({ user, onLogout, children }) {
+function Layout({ user, onLogout }) {
   return (
     <>
       <header className="topbar">
         <Link className="brand" to="/search">Stay Simple</Link>
         <nav>
-          <Link to="/search">Search</Link>
-          {user?.role === 'CUSTOMER' && <Link to="/bookings">My bookings</Link>}
-          {user?.role === 'HOST' && <><Link to="/host/listings">My listings</Link><Link to="/host/analytics">Analytics</Link></>}
-          {user?.role === 'ADMIN' && <><Link to="/admin/listings">Moderation</Link><Link to="/admin/analytics">Analytics</Link></>}
+          <NavLink to="/search">Search</NavLink>
+          {user?.role === 'CUSTOMER' && <NavLink to="/bookings">My bookings</NavLink>}
+          {user?.role === 'HOST' && <><NavLink to="/host/listings">My listings</NavLink><NavLink to="/host/analytics">Analytics</NavLink></>}
+          {user?.role === 'ADMIN' && <><NavLink to="/admin/listings">Moderation</NavLink><NavLink to="/admin/analytics">Analytics</NavLink></>}
           {user ? <button className="link-button" onClick={onLogout}>Log out</button> : <Link to="/login">Log in</Link>}
         </nav>
       </header>
-      <main className="container">{children}</main>
+      <main className="container"><Outlet /></main>
     </>
   )
 }
@@ -35,10 +40,6 @@ function Protected({ user, roles, children }) {
   if (!user) return <Navigate to="/login" replace />
   if (roles && !roles.includes(user.role)) return <Navigate to="/search" replace />
   return children
-}
-
-function Message({ error }) {
-  return error ? <p className="error">{error}</p> : null
 }
 
 function AuthLayout({ titleId, children }) {
@@ -112,26 +113,27 @@ function Register({ onLogin }) {
   </AuthLayout>
 }
 
-function AnalyticsPage({ admin = false }) { const [days, setDays] = useState(30); const [data, setData] = useState(null); const [error, setError] = useState(''); useEffect(() => { api(`${admin ? '/admin' : '/hosts/me'}/analytics?periodDays=${days}`).then(setData).catch(err => setError(err.message)) }, [admin, days]); return <><h1>{admin ? 'Admin analytics' : 'Host analytics'}</h1><label>Period<select value={days} onChange={e => setDays(e.target.value)}><option value="30">30 days</option><option value="60">60 days</option><option value="90">90 days</option></select></label><Message error={error} />{data && <section className="metrics"><div><strong>{data.totalListings}</strong><span>Listings</span></div><div><strong>{data.totalBookings}</strong><span>Bookings</span></div></section>}{data?.bookingsByZipCode.map(row => <p className="panel" key={row.zipCode}>{row.zipCode}: {row.bookingCount} bookings</p>)}</> }
-
-function AdminListings() { const [listings, setListings] = useState([]); const [error, setError] = useState(''); async function load() { try { setListings(await api('/admin/listings/pending')) } catch (err) { setError(err.message) } } useEffect(() => { load() }, []); async function moderate(id, action) { try { await api(`/admin/listings/${id}/${action}`, { method: 'POST' }); load() } catch (err) { setError(err.message) } } return <><h1>Pending listings</h1><Message error={error} /><section className="stack">{listings.map(listing => <article className="panel" key={listing.id}><h2>{listing.name}</h2><p>{listing.address}, {listing.city}, {listing.state}</p><button onClick={() => moderate(listing.id, 'approve')}>Approve</button> <button onClick={() => moderate(listing.id, 'reject')}>Reject</button></article>)}</section></> }
-
 function ReviewPage() { const { id } = useParams(); const navigate = useNavigate(); const [form, setForm] = useState({ rating: 5, comment: '' }); const [error, setError] = useState(''); async function submit(event) { event.preventDefault(); try { await api(`/bookings/${id}/review`, { method: 'POST', body: JSON.stringify(form) }); navigate('/bookings') } catch (err) { setError(err.message) } } return <section className="form-card narrow"><h1>Review your stay</h1><form onSubmit={submit}><label>Rating<select value={form.rating} onChange={e => setForm({ ...form, rating: Number(e.target.value) })}>{[5, 4, 3, 2, 1].map(value => <option key={value} value={value}>{value}</option>)}</select></label><label>Comment<textarea value={form.comment} onChange={e => setForm({ ...form, comment: e.target.value })} /></label><Message error={error} /><button className="primary">Submit review</button></form></section> }
 
 export default function App() {
   const [user, setUser] = useState(readSession)
   function logout() { clearSession(); setUser(null) }
-  return <Layout user={user} onLogout={logout}><Routes>
-    <Route path="/login" element={<Login onLogin={setUser} />} /><Route path="/register" element={<Register onLogin={setUser} />} />
-    <Route path="/search" element={<SearchPage />} /><Route path="/listings/:id" element={<ListingPage user={user} />} />
-    <Route path="/bookings" element={<Protected user={user} roles={['CUSTOMER']}><BookingsPage /></Protected>} />
-    <Route path="/bookings/:id/review" element={<Protected user={user} roles={['CUSTOMER']}><ReviewPage /></Protected>} />
-    <Route path="/host/listings" element={<Protected user={user} roles={['HOST']}><HostListings /></Protected>} />
-    <Route path="/host/listings/new" element={<Protected user={user} roles={['HOST']}><ListingForm /></Protected>} />
-    <Route path="/host/listings/:id/edit" element={<Protected user={user} roles={['HOST']}><ListingForm /></Protected>} />
-    <Route path="/host/analytics" element={<Protected user={user} roles={['HOST']}><AnalyticsPage /></Protected>} />
-    <Route path="/admin/listings" element={<Protected user={user} roles={['ADMIN']}><AdminListings /></Protected>} />
-    <Route path="/admin/analytics" element={<Protected user={user} roles={['ADMIN']}><AnalyticsPage admin /></Protected>} />
-    <Route path="*" element={<Navigate to="/search" replace />} />
-  </Routes></Layout>
+  return <Routes>
+    <Route element={<Layout user={user} onLogout={logout} />}>
+      <Route path="/login" element={<Login onLogin={setUser} />} /><Route path="/register" element={<Register onLogin={setUser} />} />
+      <Route path="/search" element={<SearchPage />} /><Route path="/listings/:id" element={<ListingPage user={user} />} />
+      <Route path="/bookings" element={<Protected user={user} roles={['CUSTOMER']}><BookingsPage /></Protected>} />
+      <Route path="/bookings/:id/review" element={<Protected user={user} roles={['CUSTOMER']}><ReviewPage /></Protected>} />
+      <Route path="/host/listings" element={<Protected user={user} roles={['HOST']}><HostListings /></Protected>} />
+      <Route path="/host/listings/new" element={<Protected user={user} roles={['HOST']}><ListingForm /></Protected>} />
+      <Route path="/host/listings/:id/edit" element={<Protected user={user} roles={['HOST']}><ListingForm /></Protected>} />
+      <Route path="/host/analytics" element={<Protected user={user} roles={['HOST']}><Analytics /></Protected>} />
+      <Route path="/admin" element={<Protected user={user} roles={['ADMIN']}><Outlet /></Protected>}>
+        <Route index element={<Navigate to="listings" replace />} />
+        <Route path="listings" element={<AdminListings />} />
+        <Route path="analytics" element={<Analytics admin />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/search" replace />} />
+    </Route>
+  </Routes>
 }

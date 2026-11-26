@@ -1,12 +1,12 @@
 import os
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-db_path = Path("backend/test_api.db")
-if db_path.exists():
-    db_path.unlink()
+test_directory = TemporaryDirectory()
+db_path = Path(test_directory.name) / "test_api.db"
 
-os.environ["DATABASE_URL"] = "sqlite:///./backend/test_api.db"
+os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 os.environ["AUTH_SECRET"] = "test-secret"
 os.environ["SEED_DEMO_DATA"] = "true"
 
@@ -19,6 +19,10 @@ def token(client: TestClient, email: str, password: str) -> str:
     response = client.post("/api/v1/auth/login", json={"email": email, "password": password})
     assert response.status_code == 200, response.text
     return response.json()["data"]["token"]
+
+
+def authorization(client: TestClient, email: str, password: str) -> dict:
+    return {"Authorization": f"Bearer {token(client, email, password)}"}
 
 
 def test_core_customer_host_admin_flow():
@@ -161,3 +165,102 @@ def test_core_customer_host_admin_flow():
         )
         assert analytics.status_code == 200
         assert analytics.json()["data"]["totalListings"] >= 1
+
+
+def test_request_validation_and_business_error_codes():
+    with TestClient(app) as client:
+        host = authorization(client, "host@example.com", "Host123!")
+        invalid_login = client.post(
+            "/api/v1/auth/login", json={"email": "host@example.com", "password": "wrong"},
+        )
+        assert invalid_login.status_code == 401
+        assert invalid_login.json()["error"]["code"] == "AUTH_INVALID_CREDENTIALS"
+
+        listing = {
+            "name": "Request Validation Rental",
+            "description": "A test rental",
+            "address": "10 Test Street",
+            "city": "Austin",
+            "state": "TX",
+            "zipCode": "78704",
+            "pricePerNightCents": 10000,
+            "maxGuests": 2,
+        }
+        invalid_listing = client.post("/api/v1/listings", headers=host, json={**listing, "status": "APPROVED"})
+        assert invalid_listing.status_code == 400
+        assert "status" in invalid_listing.json()["error"]["fieldErrors"]
+
+        created = client.post("/api/v1/listings", headers=host, json=listing)
+        assert created.status_code == 201
+        listing_id = created.json()["data"]["id"]
+        edited = client.patch(f"/api/v1/listings/{listing_id}", headers=host, json={**listing, "latitude": 30.2672})
+        assert edited.status_code == 200
+        assert edited.json()["data"]["latitude"] == 30.2672
+        assert client.delete(f"/api/v1/listings/{listing_id}", headers=host).status_code == 200
+        assert client.get(f"/api/v1/listings/{listing_id}", headers=host).json()["data"]["status"] == "REMOVED"
+
+        customer = authorization(client, "customer@example.com", "Customer123!")
+        booking = {"listingId": listing_id, "checkIn": "2099-07-10", "checkOut": "2099-07-10", "guests": 1}
+        invalid_dates = client.post("/api/v1/bookings", headers=customer, json=booking)
+        assert invalid_dates.status_code == 400
+        assert invalid_dates.json()["error"]["code"] == "BOOKING_DATE_INVALID"
+
+        reviewer = authorization(client, "customer.reviewed@example.com", "Customer123!")
+        booking = client.get("/api/v1/bookings", headers=reviewer).json()["data"][0]
+        duplicate = client.post(f"/api/v1/bookings/{booking['id']}/review", headers=reviewer, json={"rating": 4})
+        assert duplicate.status_code == 409
+        assert duplicate.json()["error"]["code"] == "REVIEW_ALREADY_EXISTS"
+
+
+def test_analytics_uses_bounded_periods_and_excludes_cancelled_bookings():
+    with TestClient(app) as client:
+        client.post(
+            "/api/v1/auth/register",
+            json={"name": "Analytics Window Host", "email": "window@example.com", "password": "Host123!", "role": "HOST"},
+        ).raise_for_status()
+        host = authorization(client, "window@example.com", "Host123!")
+        admin = authorization(client, "admin@example.com", "Admin123!")
+        customer = authorization(client, "customer@example.com", "Customer123!")
+        created = client.post(
+            "/api/v1/listings", headers=host,
+            json={
+                "name": "Analytics Window Rental",
+                "description": "A test rental",
+                "address": "20 Test Street",
+                "city": "Austin",
+                "state": "TX",
+                "zipCode": "78704",
+                "pricePerNightCents": 10000,
+                "maxGuests": 2,
+            },
+        )
+        assert created.status_code == 201
+        listing_id = created.json()["data"]["id"]
+        client.post(f"/api/v1/admin/listings/{listing_id}/approve", headers=admin).raise_for_status()
+
+        today = datetime.now(UTC).date()
+        for offset in (-62, -35, -8, -5, 3):
+            check_in = today + timedelta(days=offset)
+            result = client.post(
+                "/api/v1/bookings", headers=customer,
+                json={
+                    "listingId": listing_id,
+                    "checkIn": check_in.isoformat(),
+                    "checkOut": (check_in + timedelta(days=1)).isoformat(),
+                    "guests": 1,
+                },
+            )
+            assert result.status_code == 201
+            if offset == -5:
+                booking_id = result.json()["data"]["id"]
+                client.post(f"/api/v1/bookings/{booking_id}/cancel", headers=customer).raise_for_status()
+
+        for period, expected in ((30, 1), (60, 2), (90, 3)):
+            response = client.get("/api/v1/hosts/me/analytics", params={"periodDays": period}, headers=host)
+            assert response.status_code == 200
+            assert response.json()["data"] == {
+                "periodDays": period,
+                "totalListings": 1,
+                "totalBookings": expected,
+                "bookingsByZipCode": [{"zipCode": "78704", "bookingCount": expected}],
+            }

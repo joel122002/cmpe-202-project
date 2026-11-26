@@ -1,10 +1,10 @@
-from datetime import date, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ..models import Booking, BookingStatus, Listing, User
+from ..models import Booking, BookingStatus, Listing
 
 
 def validate_period(period_days: int) -> None:
@@ -14,7 +14,8 @@ def validate_period(period_days: int) -> None:
 
 def summary(db: Session, period_days: int, host_id: str | None = None) -> dict:
     validate_period(period_days)
-    start = date.today() - timedelta(days=period_days)
+    today = datetime.now(UTC).date()
+    start = today - timedelta(days=period_days)
     listing_query = select(Listing)
     if host_id:
         listing_query = listing_query.where(Listing.host_id == host_id)
@@ -28,7 +29,7 @@ def summary(db: Session, period_days: int, host_id: str | None = None) -> dict:
         .where(
             Listing.id.in_(listing_ids),
             Booking.status == BookingStatus.CONFIRMED.value,
-            Booking.check_in >= start,
+            Booking.check_in.between(start, today),
         )
         .group_by(Listing.zip_code)
     ).all()
