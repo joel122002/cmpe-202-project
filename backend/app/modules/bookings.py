@@ -4,9 +4,10 @@ from fastapi import HTTPException
 from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
+from ..errors import APIError
 from ..models import Booking, BookingStatus, Listing, ListingStatus, User
 from ..schemas import BookingInput
-from .common import nights, overlaps
+from .common import nights
 
 booking_lock = Lock()
 
@@ -30,10 +31,12 @@ def create(db: Session, customer: User, data: BookingInput) -> Booking:
     stay_nights = nights(data.checkIn, data.checkOut)
     with booking_lock:
         listing = db.scalar(select(Listing).where(Listing.id == data.listingId).with_for_update())
-        if not listing or listing.status != ListingStatus.APPROVED.value:
+        if not listing:
             raise HTTPException(404, "Listing was not found")
+        if listing.status != ListingStatus.APPROVED.value:
+            raise APIError(404, "LISTING_NOT_APPROVED", "Listing is unavailable for booking")
         if data.guests > listing.max_guests:
-            raise HTTPException(400, "Guest count exceeds listing capacity")
+            raise APIError(400, "BOOKING_GUEST_LIMIT_EXCEEDED", "Guest count exceeds listing capacity")
         existing = db.scalars(
             select(Booking).where(
                 and_(
@@ -45,7 +48,7 @@ def create(db: Session, customer: User, data: BookingInput) -> Booking:
             )
         ).all()
         if existing:
-            raise HTTPException(409, "Listing is unavailable for these dates")
+            raise APIError(409, "BOOKING_DATE_UNAVAILABLE", "Listing is unavailable for these dates")
         booking = Booking(
             listing_id=listing.id,
             customer_id=customer.id,
@@ -77,9 +80,9 @@ def cancel(db: Session, customer: User, booking_id: str) -> Booking:
     if not booking:
         raise HTTPException(404, "Booking was not found")
     if booking.customer_id != customer.id:
-        raise HTTPException(403, "Booking does not belong to this customer")
+        raise APIError(403, "BOOKING_NOT_OWNER", "Booking does not belong to this customer")
     if booking.status == BookingStatus.CANCELLED.value:
-        raise HTTPException(400, "Booking is already cancelled")
+        raise APIError(400, "BOOKING_ALREADY_CANCELLED", "Booking is already cancelled")
     booking.status = BookingStatus.CANCELLED.value
     db.commit()
     db.refresh(booking)

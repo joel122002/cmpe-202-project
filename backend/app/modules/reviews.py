@@ -1,9 +1,10 @@
 from datetime import date
 
-from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..errors import APIError
 from ..models import Booking, BookingStatus, Review, User
 from ..schemas import ReviewInput
 
@@ -22,11 +23,12 @@ def to_dict(review: Review) -> dict:
 def create(db: Session, customer: User, booking_id: str, data: ReviewInput) -> Review:
     booking = db.get(Booking, booking_id)
     if not booking or booking.customer_id != customer.id:
-        raise HTTPException(403, "Review is not eligible for this customer")
+        raise APIError(403, "REVIEW_NOT_ELIGIBLE", "Review is not eligible for this customer")
     if booking.status == BookingStatus.CANCELLED.value or booking.check_out >= date.today():
-        raise HTTPException(400, "Review is available after the booking has ended")
-    if db.scalar(select(Review).where(Review.booking_id == booking_id)):
-        raise HTTPException(409, "A review already exists for this booking")
+        raise APIError(400, "REVIEW_NOT_ELIGIBLE", "Review is available after the booking has ended")
+    existing_review = select(Review.id).where(Review.booking_id == booking_id)
+    if db.scalar(existing_review):
+        raise APIError(409, "REVIEW_ALREADY_EXISTS", "A review already exists for this booking")
     review = Review(
         booking_id=booking.id,
         listing_id=booking.listing_id,
@@ -35,6 +37,12 @@ def create(db: Session, customer: User, booking_id: str, data: ReviewInput) -> R
         comment=data.comment,
     )
     db.add(review)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        if db.scalar(existing_review):
+            raise APIError(409, "REVIEW_ALREADY_EXISTS", "A review already exists for this booking") from exc
+        raise
     db.refresh(review)
     return review

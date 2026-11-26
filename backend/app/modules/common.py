@@ -1,14 +1,14 @@
 from datetime import date
 
-from fastapi import HTTPException
+from ..errors import APIError
 
 
 def nights(check_in: date, check_out: date) -> int:
     count = (check_out - check_in).days
     if count < 1:
-        raise HTTPException(400, "checkOut must be after checkIn")
+        raise APIError(400, "BOOKING_DATE_INVALID", "Check-out must be after check-in")
     if count > 14:
-        raise HTTPException(400, "Stay cannot exceed 14 nights")
+        raise APIError(400, "BOOKING_TOO_LONG", "Stay cannot exceed 14 nights")
     return count
 
 
