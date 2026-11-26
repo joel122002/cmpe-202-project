@@ -1,0 +1,62 @@
+@startuml
+title <size:26><color:#142D4E>Vacation Rental</color></size>\n<size:16><color:#64748B>01 / UML component architecture</color></size>
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam componentStyle uml2
+skinparam roundCorner 12
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.3
+skinparam nodesep 95
+skinparam ranksep 100
+skinparam packageStyle rectangle
+skinparam packageBorderColor #CBD5E1
+skinparam packageFontColor #142D4E
+skinparam componentBorderColor #52769E
+skinparam componentBackgroundColor #F0F6FD
+skinparam componentFontColor #142D4E
+skinparam interfaceBorderColor #52769E
+skinparam noteBackgroundColor #FFFBEB
+skinparam noteBorderColor #D8B56C
+skinparam noteFontColor #66542B
+skinparam footerFontColor #64748B
+
+component "Web application\n<b>React + React Router</b>\nCustomer / Host / Admin screens\nAPI client: src/api.js" as UI #EAF3FC
+component "Google Maps\nEmbedded listing map" as Maps <<external>> #F5F3FF
+interface "REST / JSON\n/api/v1" as REST
+
+package "FASTAPI BACKEND  /  single deployable" #FAFCFF {
+  component "HTTP routing\n<b>Auth / Listings / Search / Bookings</b>\n<b>Reviews / Analytics / Admin</b>\napp/routers/*" as Routes
+  component "Request protection\nJWT authentication / role checks\nPydantic validation / CORS\ndeps.py / security.py / schemas.py" as Guard #F0FDF9
+
+  package "Business logic  /  logical groupings of existing modules" #FFFFFF {
+    component "Accounts\nRegistration / password hashing\nmodules/auth.py" as Accounts
+    component "Rental operations\nListing management / moderation\nBooking rules / cancellation\nReview eligibility\nmodules/listings.py, bookings.py, reviews.py" as Rental
+    component "Reporting\nHost and system summaries\nmodules/analytics.py" as Reporting
+  }
+  component "Persistence\n<b>SQLAlchemy ORM + sessions</b>\nUser / Listing / Booking / Review\napp/db.py + app/models.py" as ORM #F0FDF9
+}
+database "SQLite\nCurrent local datastore" as DB #FFF8E8
+
+UI ..> REST : uses
+REST -down- Routes
+UI .right.> Maps : HTTPS iframe
+Routes .right.> Guard : uses
+Routes ..> Accounts
+Routes ..> Rental
+Routes ..> Reporting
+Accounts ..> ORM
+Rental ..> ORM
+Reporting ..> ORM
+Routes ..> ORM : direct route queries\n(including search)
+ORM ..> DB : SQL / local file access
+
+legend bottom left
+  <b>READING THE DIAGRAM</b>
+  Component boxes = software responsibilities; dashed arrows = dependencies.
+  Business groupings summarize existing code, not independent services.
+  Authentication and role checks apply to protected endpoints.
+endlegend
+footer IMPLEMENTED ARCHITECTURE  |  Source: backend/app + frontend/src
+@enduml

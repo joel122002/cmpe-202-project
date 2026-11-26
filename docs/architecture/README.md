@@ -14,6 +14,8 @@ The application is a **modular monolith**: one backend deployable, one relationa
 
 ## Required reading order
 
+Rendered UML component and deployment views: [Architecture diagrams](diagrams/README.md).
+
 1. [`system-overview.md`](system-overview.md)
 2. [`repository-structure.md`](repository-structure.md)
 3. [`contracts.md`](contracts.md)

@@ -1,0 +1,110 @@
+@startuml
+top to bottom direction
+title <size:26><color:#142D4E>Vacation Rental</color></size>\n<size:16><color:#64748B>05 / UML use case diagram / role views</color></size>
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 16
+skinparam shadowing false
+skinparam roundCorner 12
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.2
+skinparam nodesep 45
+skinparam ranksep 45
+skinparam actorBorderColor #52769E
+skinparam actorFontColor #142D4E
+skinparam usecaseBorderColor #52769E
+skinparam usecaseFontColor #142D4E
+skinparam rectangleBorderColor #CBD5E1
+skinparam rectangleFontColor #142D4E
+skinparam footerFontColor #64748B
+
+actor Customer
+actor Host
+actor Admin
+actor "Google Maps" as Maps <<external service>>
+
+rectangle "VACATION RENTAL / Customer view" as CustomerView #F5F9FF {
+  usecase "Register as customer" as CRegister #EAF3FC
+  usecase "Log in" as CLogin #EAF3FC
+  usecase "Search available rentals\nDates / guests / location" as Search #EAF3FC
+  usecase "View listing details\nPhotos / price / reviews" as Details #EAF3FC
+  usecase "View location on map" as Map #EAF3FC
+  usecase "Book a stay\n1 to 14 nights" as Book #EAF3FC
+  usecase "View my bookings" as MyBookings #EAF3FC
+  usecase "Cancel my booking" as Cancel #EAF3FC
+  usecase "Submit rating and review\nAfter a completed stay" as Review #EAF3FC
+}
+
+rectangle "VACATION RENTAL / Host view" as HostView #F5FCF8 {
+  usecase "Register as host" as HRegister #E7F5EF
+  usecase "Log in" as HLogin #E7F5EF
+  usecase "Add a listing" as Add #E7F5EF
+  usecase "View my listings" as MyListings #E7F5EF
+  usecase "Update my listing\nDetails / photos / price / capacity" as Update #E7F5EF
+  usecase "Remove my listing" as Remove #E7F5EF
+  usecase "View my rental analytics\nZIP codes / 30, 60 or 90 days" as HostAnalytics #E7F5EF
+}
+
+rectangle "VACATION RENTAL / Admin view" as AdminView #FFFBF2 {
+  usecase "Log in" as ALogin #FFF4D9
+  usecase "View pending listings" as Pending #FFF4D9
+  usecase "Approve a listing" as Approve #FFF4D9
+  usecase "Reject a listing" as Reject #FFF4D9
+  usecase "View system-wide analytics\nZIP codes / 30, 60 or 90 days" as AdminAnalytics #FFF4D9
+}
+
+Customer -[norank]- CRegister
+Customer -[norank]- CLogin
+Customer -[norank]- Search
+Customer -[norank]- Details
+Customer -right- Map
+Customer -[norank]- Book
+Customer -[norank]- MyBookings
+Customer -[norank]- Cancel
+Customer -[norank]- Review
+Map -right- Maps
+
+Host -[norank]- HRegister
+Host -[norank]- HLogin
+Host -[norank]- Add
+Host -right- MyListings
+Host -[norank]- Update
+Host -[norank]- Remove
+Host -[norank]- HostAnalytics
+
+Admin -[norank]- ALogin
+Admin -[norank]- Pending
+Admin -right- Approve
+Admin -[norank]- Reject
+Admin -[norank]- AdminAnalytics
+
+CRegister -[hidden]right- HRegister
+HRegister -[hidden]right- ALogin
+CRegister -[hidden]down- CLogin
+CLogin -[hidden]down- Search
+Search -[hidden]down- Details
+Details -[hidden]down- Map
+Map -[hidden]down- Book
+Book -[hidden]down- MyBookings
+MyBookings -[hidden]down- Cancel
+Cancel -[hidden]down- Review
+HRegister -[hidden]down- HLogin
+HLogin -[hidden]down- Add
+Add -[hidden]down- MyListings
+MyListings -[hidden]down- Update
+Update -[hidden]down- Remove
+Remove -[hidden]down- HostAnalytics
+ALogin -[hidden]down- Pending
+Pending -[hidden]down- Approve
+Approve -[hidden]down- Reject
+Reject -[hidden]down- AdminAnalytics
+
+legend bottom left
+  <b>THREE VIEWS OF THE SAME APPLICATION</b>
+  Role views repeat the system boundary and shared login use case for readability.
+  Lines show actor participation, not request order or data flow.
+  Search, listing details and maps are public; personal actions require the appropriate role.
+  Admin accounts are provisioned; public registration is for customers and hosts only.
+endlegend
+footer IMPLEMENTED USER GOALS  |  frontend/src/App.jsx + backend/app/routers
+@enduml

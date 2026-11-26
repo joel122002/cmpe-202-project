@@ -1,0 +1,84 @@
+@startuml
+!pragma layout smetana
+left to right direction
+title <size:26><color:#142D4E>Vacation Rental / AWS</color></size>\n<size:16><color:#64748B>03 / Proposed cloud deployment architecture</color></size>
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.3
+skinparam nodesep 85
+skinparam ranksep 110
+skinparam packageStyle rectangle
+skinparam packageBorderColor #CBD5E1
+skinparam packageFontColor #142D4E
+skinparam nodeBorderColor #52769E
+skinparam nodeBackgroundColor #F0F6FD
+skinparam nodeFontColor #142D4E
+skinparam artifactBorderColor #94A3B8
+skinparam artifactBackgroundColor #FFFFFF
+skinparam artifactFontColor #142D4E
+skinparam footerFontColor #64748B
+
+node "User device" as Device <<device>> #EAF3FC {
+  artifact "Browser / React UI\nCustomer / Host / Admin" as Browser
+}
+node "Google Maps" as Maps <<external service>> #F5F3FF {
+  artifact "Location display\nAddress search integration" as MapsAPI
+}
+
+package "AWS CLOUD" #FAFCFF {
+  node "AWS Amplify Hosting" as Hosting <<managed hosting>> #EAF3FC {
+    artifact "React production build\nHTML / JavaScript / CSS" as Web
+  }
+
+  package "APPLICATION VPC" #FFFFFF {
+    frame "PUBLIC SUBNETS / Availability Zones A + B" #FFF8ED {
+      node "Application Load Balancer" as ALB <<ALB>> #FFF0D9 {
+        artifact "HTTPS listener :443 / TLS certificate\nAPI target group :8000\nHealth check: GET /health" as Listener
+      }
+    }
+
+    frame "EC2 AUTO SCALING GROUP / private application subnets" as ASG #F0FDF9 {
+      node "API instance A\nAvailability Zone A" as EC2A <<EC2>> #E7F5EF {
+        artifact "FastAPI + Uvicorn :8000\nAuth / Listings / Search\nBookings / Reviews / Analytics / Admin\nJWT + role checks / JSON validation" as AppA
+      }
+      node "API instance B\nAvailability Zone B" as EC2B <<EC2>> #E7F5EF {
+        artifact "FastAPI + Uvicorn :8000\nSame application deployment\nShared database + JWT secret\nInstances added / removed with demand" as AppB
+      }
+    }
+
+    frame "PRIVATE DATABASE SUBNET GROUP / Availability Zones A + B" #FFFCF3 {
+      node "Amazon RDS" as RDS <<managed database>> #FFF4D9 {
+        artifact "PostgreSQL / shared persistent data\nUsers / Listings / Bookings / Reviews\nSeeded mock rental listings" as DB
+      }
+    }
+  }
+
+  node "Amazon CloudWatch" as Metrics <<monitoring>> #F5F3FF {
+    artifact "ALB requests per target\nTarget-tracking scaling policy" as Policy
+  }
+}
+
+Device -- Hosting : HTTPS :443\nload web application
+Device -- ALB : HTTPS :443 /api/v1/*\nREST / JSON + bearer token
+Device -- Maps : HTTPS\nmap + address lookup
+ALB -- EC2A : HTTP :8000\nhealthy target
+ALB -- EC2B : HTTP :8000\nhealthy target
+EC2A -- RDS : PostgreSQL / TLS :5432
+EC2B -- RDS : PostgreSQL / TLS :5432
+ALB ..> Metrics : request metrics
+Metrics ..> ASG
+
+legend bottom left
+  <b>PROPOSED DESIGN / REQUIREMENTS VIEW</b>
+  ALB distributes API requests; Auto Scaling registers and replaces instances.
+  EC2 allows API traffic from the ALB security group only.
+  RDS allows database traffic from the EC2 security group only; no public access.
+  Solid lines = communication paths. Dashed arrows = monitoring / scaling control.
+  Amplify and RDS are design choices. This infrastructure is not yet provisioned.
+endlegend
+footer UML DEPLOYMENT VIEW  |  ALB + auto-scaled EC2 cluster + shared cloud database
+@enduml

@@ -1,0 +1,10 @@
+project_id = "your-gcp-project-id"
+
+# Optional. Leave blank to use HTTP only.
+domain_name = "demo.example.com"
+
+# Keep this at 1 for the cheapest demo.
+min_replicas     = 1
+desired_replicas = 1
+max_replicas     = 2
+

@@ -1,0 +1,32 @@
+#!/bin/bash
+set -euxo pipefail
+
+apt-get update
+apt-get install -y ca-certificates curl git docker.io
+systemctl enable --now docker
+
+rm -rf /opt/vacation-rental
+git clone ${repository_url} /opt/vacation-rental
+cd /opt/vacation-rental
+
+docker build -t vacation-rental-backend ./backend
+docker build -t vacation-rental-frontend ./frontend
+
+docker rm -f vacation-rental-backend vacation-rental-frontend || true
+
+docker run -d --restart unless-stopped \
+  --name vacation-rental-backend \
+  -p 8000:8000 \
+  -e DATABASE_URL="postgresql+psycopg://${database_user}:${database_password}@${database_host}:5432/${database_name}" \
+  -e AUTH_SECRET="demo-secret-change-me" \
+  -e FRONTEND_ORIGIN="${frontend_origin}" \
+  -e SEED_DEMO_DATA="true" \
+  vacation-rental-backend
+
+docker run -d --restart unless-stopped \
+  --name vacation-rental-frontend \
+  -p 5173:5173 \
+  -e __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS="${frontend_domain}" \
+  -e VITE_API_URL="/api/v1" \
+  vacation-rental-frontend
+

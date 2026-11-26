@@ -2,6 +2,10 @@
 
 FastAPI + React implementation of the vacation-rental MVP described in [`docs/architecture`](docs/architecture/README.md).
 
+## Architecture diagrams
+
+See the [UML diagram sources and exports](docs/architecture/diagrams/README.md) for the component architecture, domain classes, role-based use cases, local Docker deployment, and [proposed AWS deployment with ALB and EC2 Auto Scaling](docs/architecture/diagrams/aws-architecture.svg).
+
 ## Local development
 
 Start the backend in one terminal:

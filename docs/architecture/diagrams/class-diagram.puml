@@ -1,0 +1,111 @@
+@startuml
+title <size:26><color:#142D4E>Vacation Rental</color></size>\n<size:16><color:#64748B>04 / UML domain class diagram</color></size>
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam roundCorner 10
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F0F6FD
+skinparam classBorderColor #52769E
+skinparam classFontColor #142D4E
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1.3
+skinparam nodesep 130
+skinparam ranksep 100
+skinparam packageStyle rectangle
+skinparam packageBorderColor #CBD5E1
+skinparam packageFontColor #142D4E
+skinparam footerFontColor #64748B
+hide circle
+hide empty methods
+
+class User <<entity>> #EAF3FC {
+  id : str {PK}
+  name : str
+  email : str {unique}
+  password_hash : str
+  role : Role
+  created_at : datetime
+  updated_at : datetime
+}
+class Listing <<entity>> #F0FDF9 {
+  id : str {PK}
+  host_id : str {FK: User.id}
+  name : str
+  description : str
+  address : str
+  city : str
+  state : str
+  zip_code : str
+  latitude : float [0..1]
+  longitude : float [0..1]
+  price_per_night_cents : int
+  max_guests : int
+  photo_urls : list[str]
+  status : ListingStatus
+  created_at : datetime
+  updated_at : datetime
+}
+class Booking <<entity>> #FFF8E8 {
+  id : str {PK}
+  listing_id : str {FK: Listing.id}
+  customer_id : str {FK: User.id}
+  check_in : date
+  check_out : date
+  guests : int
+  total_cost_cents : int
+  status : BookingStatus
+  created_at : datetime
+  updated_at : datetime
+}
+class Review <<entity>> #F5F3FF {
+  id : str {PK}
+  booking_id : str {FK: Booking.id, unique}
+  listing_id : str {FK: Listing.id}
+  customer_id : str {FK: User.id}
+  rating : int
+  comment : str [0..1]
+  created_at : datetime
+  updated_at : datetime
+}
+
+User "<back:white>1</back>" -- "<back:white>0..*</back>" Listing : <back:white>hosts</back>
+User "<back:white>1</back>" -- "<back:white>0..*</back>" Booking : <back:white>reserves</back>
+User "<back:white>1</back>" -- "<back:white>0..*</back>" Review : <back:white>writes</back>
+Listing "<back:white>1</back>" -- "<back:white>0..*</back>" Booking : <back:white>receives</back>
+Listing "<back:white>1</back>" -- "<back:white>0..*</back>" Review : <back:white>is rated by</back>
+Booking "<back:white>1</back>" -- "<back:white>0..1</back>" Review : <back:white>has</back>
+
+package "Value types / stored as strings" #FAFCFF {
+  enum Role {
+    CUSTOMER
+    HOST
+    ADMIN
+  }
+  enum ListingStatus {
+    PENDING_APPROVAL
+    APPROVED
+    REJECTED
+    REMOVED
+  }
+  enum BookingStatus {
+    CONFIRMED
+    CANCELLED
+  }
+  Role -[hidden]right- ListingStatus
+  ListingStatus -[hidden]right- BookingStatus
+}
+Review -[hidden]down- ListingStatus
+
+legend bottom left
+  <b>MODEL NOTES</b>
+  PK = primary key; FK = foreign key; [0..1] = nullable attribute.
+  Each listing has one host; each booking and review has one customer.
+  A booking has at most one review, enforced by a unique booking_id.
+  Money is stored in integer cents; rating validation allows 1 through 5.
+  Lines show foreign-key associations, not ORM relationship properties.
+  Business operations live in module functions, not entity methods.
+endlegend
+footer IMPLEMENTED DOMAIN MODEL  |  backend/app/models.py
+@enduml
