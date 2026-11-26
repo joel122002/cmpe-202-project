@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ..db import get_db
 from ..deps import current_user
+from ..errors import APIError
 from ..models import User
 from ..modules import auth as auth_service
 from ..schemas import AuthData, LoginRequest, RegisterRequest, UserOut
@@ -21,7 +22,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email.lower()).first()
     if not user or not verify_password(request.password, user.password_hash):
-        raise HTTPException(401, "Invalid email or password")
+        raise APIError(401, "AUTH_INVALID_CREDENTIALS", "Invalid email or password")
     auth = AuthData(token=create_token(user.id), user=UserOut.model_validate(user))
     return {"data": auth.model_dump(), "error": None}
 

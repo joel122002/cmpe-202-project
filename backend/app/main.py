@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from .config import get_settings
 from .db import Base, SessionLocal, engine
-from .errors import error_response, validation_exception_handler
+from .errors import APIError, error_response, validation_exception_handler
 from .routers import admin, analytics, auth, bookings, listings, reviews, search
 from .seed import seed_demo_data
 
@@ -37,26 +37,13 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_, exc: HTTPException):
-    code = {
+    default_code = {
         401: "AUTH_UNAUTHENTICATED",
         403: "AUTH_FORBIDDEN",
         404: "RESOURCE_NOT_FOUND",
-        409: "BOOKING_DATE_UNAVAILABLE",
     }.get(exc.status_code, "VALIDATION_ERROR")
-    message = str(exc.detail)
-    if "already exists" in message.lower():
-        code = "REVIEW_ALREADY_EXISTS"
-    elif "already registered" in message.lower():
-        code = "VALIDATION_ERROR"
-    if "already cancelled" in message.lower():
-        code = "BOOKING_ALREADY_CANCELLED"
-    elif "guest" in message.lower() or "stay" in message.lower() or "checkout" in message.lower():
-        code = "VALIDATION_ERROR"
-    elif "review" in message.lower():
-        code = "REVIEW_NOT_ELIGIBLE"
-    elif "email" in message.lower():
-        code = "VALIDATION_ERROR"
-    return error_response(exc.status_code, code, message)
+    code = exc.code if isinstance(exc, APIError) else default_code
+    return error_response(exc.status_code, code, str(exc.detail))
 
 
 @app.get("/health")

@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from .models import BookingStatus, ListingStatus, Role
 
@@ -17,14 +17,18 @@ class Envelope(BaseModel):
     error: ErrorBody | None = None
 
 
-class RegisterRequest(BaseModel):
+class RequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class RegisterRequest(RequestBody):
     name: str = Field(min_length=1, max_length=120)
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     role: Role
 
 
-class LoginRequest(BaseModel):
+class LoginRequest(RequestBody):
     email: EmailStr
     password: str
 
@@ -43,7 +47,7 @@ class AuthData(BaseModel):
     user: UserOut
 
 
-class ListingInput(BaseModel):
+class ListingInput(RequestBody):
     name: str = Field(min_length=1, max_length=160)
     description: str = Field(min_length=1)
     address: str = Field(min_length=1, max_length=255)
@@ -87,20 +91,11 @@ class SearchResult(BaseModel):
     reviewCount: int
 
 
-class BookingInput(BaseModel):
+class BookingInput(RequestBody):
     listingId: str
     checkIn: date
     checkOut: date
     guests: int = Field(gt=0)
-
-    @field_validator("checkOut")
-    @classmethod
-    def check_order(cls, value: date, info):
-        check_in = info.data.get("checkIn")
-        if check_in and value <= check_in:
-            raise ValueError("checkOut must be after checkIn")
-        return value
-
 
 class BookingOut(BaseModel):
     id: str
@@ -115,7 +110,7 @@ class BookingOut(BaseModel):
     status: BookingStatus
 
 
-class ReviewInput(BaseModel):
+class ReviewInput(RequestBody):
     rating: int = Field(ge=1, le=5)
     comment: str | None = None
 

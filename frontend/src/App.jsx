@@ -38,46 +38,75 @@ function Message({ error }) {
   return error ? <p className="error">{error}</p> : null
 }
 
+function AuthLayout({ titleId, children }) {
+  return <div className="auth-shell">
+    <Link className="login-back" to="/search">← Explore stays</Link>
+    <div className="login-page">
+      <section className="login-panel" aria-labelledby={titleId}>{children}</section>
+      <aside className="login-visual" aria-label="A little inspiration for your next stay"></aside>
+    </div>
+  </div>
+}
+
 function Login({ onLogin }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ email: 'customer@example.com', password: 'Customer123!' })
+  const [form, setForm] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
   async function submit(event) {
     event.preventDefault()
+    setError('')
+    setBusy(true)
     try {
       const auth = await api('/auth/login', { method: 'POST', body: JSON.stringify(form) })
       saveSession(auth)
       onLogin(auth.user)
       navigate('/search')
     } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
   }
-  return <section className="form-card narrow"><h1>Log in</h1><p className="muted">Demo customer: customer@example.com / Customer123!</p>
-    <form onSubmit={submit}><label>Email<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></label>
-      <label>Password<input type="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required /></label>
-      <Message error={error} /><button className="primary">Log in</button></form>
-    <p>Need an account? <Link to="/register">Register</Link></p>
-  </section>
+  return <AuthLayout titleId="login-title">
+      <p className="eyebrow">A different place. A familiar feeling.</p>
+      <h1 id="login-title">Welcome back.</h1>
+      <p className="login-intro">Log in to find your next stay and pick up where you left off.</p>
+      <form className="login-form" onSubmit={submit}>
+        <label htmlFor="login-email">Email address<input id="login-email" type="email" name="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></label>
+        <label htmlFor="login-password">Password<input id="login-password" type="password" name="password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required /></label>
+        <Message error={error} /><button className="primary login-submit" disabled={busy}>{busy ? 'Logging in…' : 'Log in'} <span aria-hidden="true">↗</span></button>
+      </form>
+      <p className="login-register">New to Stay Simple? <Link to="/register">Create an account ↗</Link></p>
+  </AuthLayout>
 }
 
 function Register({ onLogin }) {
   const navigate = useNavigate()
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'CUSTOMER' })
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
   async function submit(event) {
     event.preventDefault()
+    setError('')
+    setBusy(true)
     try {
       await api('/auth/register', { method: 'POST', body: JSON.stringify(form) })
       const auth = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email: form.email, password: form.password }) })
       saveSession(auth); onLogin(auth.user); navigate('/search')
     } catch (err) { setError(err.message) }
+    finally { setBusy(false) }
   }
-  return <section className="form-card narrow"><h1>Register</h1><form onSubmit={submit}>
-    <label>Name<input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
-    <label>Email<input type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></label>
-    <label>Password<input type="password" minLength="8" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required /></label>
-    <label>Role<select value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="CUSTOMER">Customer</option><option value="HOST">Host</option></select></label>
-    <Message error={error} /><button className="primary">Create account</button>
-  </form></section>
+  return <AuthLayout titleId="register-title">
+    <p className="eyebrow">A different place. A familiar feeling.</p>
+    <h1 id="register-title">Create an account.</h1>
+    <p className="login-intro">Find your next getaway or welcome guests to a place of your own.</p>
+    <form className="login-form" onSubmit={submit}>
+      <label htmlFor="register-name">Your name<input id="register-name" name="name" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></label>
+      <label htmlFor="register-email">Email address<input id="register-email" name="email" type="email" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required /></label>
+      <label htmlFor="register-password">Password<input id="register-password" name="password" type="password" minLength="8" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} aria-describedby="password-hint" required /><small className="auth-field-hint" id="password-hint">At least 8 characters.</small></label>
+      <label htmlFor="register-role">I’m here to<select id="register-role" name="role" value={form.role} onChange={e => setForm({ ...form, role: e.target.value })}><option value="CUSTOMER">Find and book stays</option><option value="HOST">Host a property</option></select></label>
+      <Message error={error} /><button className="primary login-submit" disabled={busy}>{busy ? 'Creating your account…' : 'Create account'} <span aria-hidden="true">↗</span></button>
+    </form>
+    <p className="login-register">Already have an account? <Link to="/login">Log in ↗</Link></p>
+  </AuthLayout>
 }
 
 function SearchPage() {

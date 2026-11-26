@@ -1,6 +1,12 @@
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+
+
+class APIError(HTTPException):
+    def __init__(self, status_code: int, code: str, message: str):
+        super().__init__(status_code, message)
+        self.code = code
 
 
 def error_response(status_code: int, code: str, message: str, field_errors: dict[str, str] | None = None) -> JSONResponse:
